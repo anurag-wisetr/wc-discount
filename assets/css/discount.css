@@ -1,0 +1,25 @@
+.fcs_btn{
+    padding:8px 15px;
+    font-size:16px;
+    background: #222;
+    color: #fff;
+    border-radius: 5px;
+    display: inline-block;
+    margin-bottom: 20px;
+    cursor:pointer;
+}
+
+.fcs_input{
+    border: 1px solid #eee;
+    border-radius: 5px;
+    padding: 5px 6px;
+    display: block;
+    max-width: 250px;
+    margin-bottom: 10px;
+}
+
+.error-msg{
+    display: block;
+    color: red;
+    margin-bottom: 7px;
+}
