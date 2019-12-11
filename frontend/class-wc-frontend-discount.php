@@ -40,10 +40,8 @@
         }
 
         public function get_cart_item_from_session( $cart_item, $values ) {
-
             if ( isset( $values['discount_price'] ) ) {
                 $cart_item['discount_price'] = $values['discount_price'];
-
                 $cart_item = $this->set_product_prices( $cart_item );
             }
             return $cart_item;
@@ -74,7 +72,6 @@
         }
 
         function discount_form(){
-         
             if(empty($_COOKIE['discount_on_email_'.$this->user_id])){
                 echo '<div class="fcs_form_wrap">
                             <p>Get 50% discount now! Just enter the email</p>
