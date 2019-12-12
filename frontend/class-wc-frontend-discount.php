@@ -9,20 +9,21 @@
         function __construct()
         {
             $this->user_id=get_current_user_id();
-
             $this->get_discount();
             add_action('wp_enqueue_scripts', array($this,'load_scripts'));
             add_action('woocommerce_before_add_to_cart_button', array($this, 'discount_form'));
-            add_filter('woocommerce_get_price' ,array($this,'return_custom_price'),11,2);
-            add_filter('woocommerce_get_sale_price', array($this,'return_custom_price'),11,2);
-            add_filter('woocommerce_variation_prices_price', array($this,'return_custom_price'),20,2);
-            add_filter('woocommerce_variation_prices_sale_price', array($this,'return_custom_price'),20,2);
 
-            add_filter( 'woocommerce_add_cart_item_data', array($this,'add_cart_item_data'), 10, 3 );
-            add_filter( 'woocommerce_get_cart_item_from_session', array( $this, 'get_cart_item_from_session' ), 1, 2 );
+            add_filter('woocommerce_available_variation',array($this,'get_variation_price_html'),10,1);
+            add_filter('woocommerce_tm_final_price',array($this,'get_discounted_price1'),10,2);
+            add_filter('wc_epo_product_price', array($this,'variation_price'),10,3);
 
-            add_filter( 'woocommerce_add_cart_item', array( $this, 'set_product_prices' ), 1, 1 );
-            add_filter('woocommerce_cart_item_price', array($this,'product_price'),10,3);
+            add_filter('woocommerce_grouped_price_html', array($this, 'get_variation_and_grouped_price_html'),10,3);
+            add_filter('woocommerce_variable_price_html', array($this, 'get_variation_and_grouped_price_html'),10,2);
+            add_filter('woocommerce_get_price_html', array($this,'get_html_price'),10,2);
+
+            add_filter( 'woocommerce_add_cart_item_data', array($this,'add_cart_item_data'), 100, 3 );
+            add_filter( 'woocommerce_get_cart_item_from_session', array( $this, 'get_cart_item_from_session' ), 100, 2 );
+            add_filter( 'woocommerce_add_cart_item', array( $this, 'set_product_prices' ), 100, 1 );
         }
 
         function load_scripts(){
@@ -31,6 +32,7 @@
         }
 
         function add_cart_item_data( $cart_item_data, $product_id, $variation_id ) {
+            $product_id=!empty($variation_id)?$variation_id:$product_id;
             if(!empty($_COOKIE['discount_on_email_'.$this->user_id])){
                 $price = get_post_meta($product_id,'_price',true);
                 $price = $price * (50/100);
@@ -54,19 +56,74 @@
             return $cart_item;
         }
 
-        function product_price($product_price,$cart_item, $cart_item_key){
-            if(!empty($cart_item['discount_price'])){
-                $price=get_post_meta($cart_item['product_id'],'_price',true);
-                $price = $price*$cart_item['quantity'];
-                return wc_price($price);
-            }
-            return $product_price;
+        function get_discounted_price1($price, $product, $var1=''){
+           if(!empty($_COOKIE['discount_on_email_'.$this->user_id])){
+               $price = get_post_meta($product->get_id(), '_price', true);
+                $price = $price * (50/100);
+           }
+            return $price;
         }
 
-        function return_custom_price($price, $product){
+        function variation_price($variation_price, $var, $var1){
+            $variation_price=$this->get_discounted_price($variation_price);
+            return $variation_price;
+        }
+
+        function get_variation_price_html($param){
+            $variation_id=$param['variation_id'];
             if(!empty($_COOKIE['discount_on_email_'.$this->user_id])){
-                $price=get_post_meta($product->get_id(),'_price',true);
-                $price= $price * (50/100);
+                $price = get_post_meta( $variation_id, '_price', true);
+                $price = $price * (50/100);
+                $param['price_html']='<span class="price">' .  wc_price($price) . '</span>';
+            }
+            return $param;
+        }
+
+        function get_variation_and_grouped_price_html($price, $product, $child_prices='')
+        {
+            if (!empty($child_prices)) {
+                $min_price = min($child_prices);
+                $min_price=$this->get_discounted_price($min_price);
+                $max_price = max($child_prices);
+                $max_price=$this->get_discounted_price($max_price);
+                $price = wc_format_price_range( $min_price, $max_price );
+            }else{
+                $prices = $product->get_variation_prices( true );
+                $min_price     = current( $prices['price'] );
+                $min_price=$this->get_discounted_price($min_price);
+                $max_price     = end( $prices['price'] );
+                $max_price=$this->get_discounted_price($max_price);
+                $min_reg_price = current( $prices['regular_price'] );
+                $min_reg_price=$this->get_discounted_price($min_reg_price);
+                $max_reg_price = end( $prices['regular_price'] );
+                $max_reg_price=$this->get_discounted_price($max_reg_price);
+
+                if ( $min_price !== $max_price ) {
+                    $price = wc_format_price_range( $min_price, $max_price );
+                } elseif ( $product->is_on_sale() && $min_reg_price === $max_reg_price ) {
+                    $price = wc_format_sale_price( wc_price( $max_reg_price ), wc_price( $min_price ) );
+                } else {
+                    $price = wc_price( $min_price );
+                }
+            }
+            return $price;
+        }
+
+        function get_html_price($price,$product){
+            if($product->get_type()=='simple' && !empty($_COOKIE['discount_on_email_'.$this->user_id])){
+                $price = get_post_meta($product->get_id(), '_price', true);
+                $regular_price = get_post_meta($product->get_id(), '_regular_price', true);
+
+                $price = $price * (50/100);
+                return wc_format_sale_price(  $regular_price,  $price  );
+            }
+            return $price;
+        }
+
+        function get_discounted_price($price){
+            if(!empty($_COOKIE['discount_on_email_'.$this->user_id])){
+                $price = $price * (50/100);
+                return $price;
             }
             return $price;
         }
