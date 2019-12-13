@@ -2,13 +2,12 @@
     /**
      * Plugin Name: WooCommerce Discount
      * Plugin URI: https://woocommerce.com/
-     * Description:  WooCommerce Discount is a Wordpress woocommerce plugin for discount on product.
+     * Description:  WooCommerce Discount is a Wordpress woocommerce plugin for discount on all products.
      * Version: 1.0.0
      * Author: Wisetr
-     * Author URI: https://woocommerce.com
      */
 
-    if ( ! defined( 'ABSPATH' ) ) {
+    if (!defined('ABSPATH')){
         exit;
     }
 

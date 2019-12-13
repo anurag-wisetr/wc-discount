@@ -14,7 +14,7 @@
             $this->user_id=get_current_user_id();
             $this->wda_apply_discount();
             add_action('wp_enqueue_scripts', array($this,'wda_load_scripts'));
-            add_action('woocommerce_before_add_to_cart_button', array($this, 'wda_discount_form'));
+            add_action('woocommerce_before_add_to_cart_form', array($this, 'wda_discount_form'));
 
             add_filter('woocommerce_available_variation',array($this,'wda_change_variation_price_html'),10,1);
             add_filter('woocommerce_tm_final_price',array($this,'wda_change_tm_final_price'),10,2);
@@ -24,9 +24,9 @@
             add_filter('woocommerce_variable_price_html', array($this, 'wda_change_vg_price_html'),10,2);
             add_filter('woocommerce_get_price_html', array($this,'wda_change_simple_price_html'),10,2);
 
-            add_filter( 'woocommerce_add_cart_item_data', array($this,'wda_add_cart_item_data'), 100, 3 );
-            add_filter( 'woocommerce_get_cart_item_from_session', array( $this, 'wda_cart_item_from_session' ), 100, 2 );
-            add_filter( 'woocommerce_add_cart_item', array( $this, 'wda_set_product_prices' ), 100, 1 );
+            add_filter('woocommerce_add_cart_item_data', array($this,'wda_add_cart_item_data'), 100, 3 );
+            add_filter('woocommerce_get_cart_item_from_session', array( $this, 'wda_cart_item_from_session' ), 100, 2 );
+            add_filter('woocommerce_add_cart_item', array( $this, 'wda_set_product_prices' ), 100, 1 );
         }
 
         function wda_load_scripts(){
@@ -34,7 +34,7 @@
             wp_enqueue_script('wda-discount-script',plugin_dir_url(__DIR__ ).'assets/js/discount.js', array('jquery'),'1.0.0', true);
         }
 
-        function wda_add_cart_item_data( $cart_item_data, $product_id, $variation_id ) {
+        function wda_add_cart_item_data( $cart_item_data, $product_id, $variation_id){
             $product_id=!empty($variation_id)?$variation_id:$product_id;
             if(!empty($_COOKIE['discount_on_email_'.$this->user_id])){
                 $price = get_post_meta($product_id,'_price',true);
@@ -52,7 +52,7 @@
             return $cart_item;
         }
 
-        public function wda_set_product_prices( $cart_item ) {
+        public function wda_set_product_prices($cart_item){
             if(isset( $cart_item['discount_price'] )){
                 $cart_item['data']->set_price( (float) $cart_item['discount_price']['_price']);
             }
@@ -82,8 +82,7 @@
             return $param;
         }
 
-        function wda_change_vg_price_html($price, $product, $child_prices='')
-        {
+        function wda_change_vg_price_html($price, $product, $child_prices=''){
             if (!empty($child_prices)) {
                 $min_price = min($child_prices);
                 $min_price=$this->get_discounted_price($min_price);
@@ -101,11 +100,11 @@
                 $max_reg_price = end( $prices['regular_price'] );
                 $max_reg_price=$this->get_discounted_price($max_reg_price);
 
-                if ( $min_price !== $max_price ) {
+                if( $min_price !== $max_price ){
                     $price = wc_format_price_range( $min_price, $max_price );
-                } elseif ( $product->is_on_sale() && $min_reg_price === $max_reg_price ) {
+                }elseif($product->is_on_sale() && $min_reg_price === $max_reg_price){
                     $price = wc_format_sale_price( wc_price( $max_reg_price ), wc_price( $min_price ) );
-                } else {
+                }else{
                     $price = wc_price( $min_price );
                 }
             }
@@ -139,17 +138,16 @@
                                 <input type="text" name="discount_on_email" class="fcs_input" placeholder="Your email address">
                                 <span class="error-msg"></span>
                                 <input type="submit" name="get_discount" class="fcs_btn" value="Get the discount">
+                            </form>
                         </div>';
             }
         }
 
         function wda_apply_discount(){
             $this->wda_print_notice();
-            if(!empty($_POST['discount_on_email'] ) && wp_verify_nonce($_POST['apply_discount'],'apply_discount') ){
+            if(!empty($_POST['apply_discount'] ) && wp_verify_nonce($_POST['apply_discount'],'apply_discount') ){
                 setcookie('discount_on_email_'.$this->user_id,$_POST['discount_on_email'],0,'/');
-
                 set_transient('display_msg_'.$this->user_id,'50% Discount applied on all products.');
-
                 wp_redirect($_SERVER['HTTP_REFERER']);
                 exit;
             }
